@@ -1,16 +1,14 @@
 #![allow(warnings)]
-pub use std::env;
-pub use nalgebra::Vector3;
-pub use opencv::{
-    Result,
-};
-pub use opencv::core::Vector;
 pub use crate::rasterizer3::{Buffer, Rasterizer};
-pub use crate::utils::*;
 pub use crate::shader::FragmentShaderPayload;
 pub use crate::texture::Texture;
+pub use crate::utils::*;
+pub use nalgebra::Vector3;
+pub use opencv::core::Vector;
+pub use opencv::Result;
+pub use std::env;
 
-pub fn t3(filename:String,method:String)-> Result<()>{
+pub fn t3(filename: String, method: String) -> Result<()> {
     println!("选择任务3");
     let obj_file = "./models/spot/spot_triangulated_good.obj";
     let triangles = load_triangles(&obj_file);
@@ -21,9 +19,8 @@ pub fn t3(filename:String,method:String)-> Result<()>{
     let mut tex = Texture::new(&(obj_path.clone() + &texture_path));
     let mut active_shader: fn(&FragmentShaderPayload) -> Vector3<f64> = normal_fragment_shader; // 默认为<normal shader>
     let ags: Vec<String> = env::args().collect();
-    println!("arg len is {}",ags.len());
-    let (shader, t) =
-        choose_shader_texture(&method, &obj_path);
+    println!("arg len is {}", ags.len());
+    let (shader, t) = choose_shader_texture(&method, &obj_path);
     active_shader = shader;
     if let Some(tx) = t {
         tex = tx;
@@ -33,7 +30,6 @@ pub fn t3(filename:String,method:String)-> Result<()>{
     let eye_pos = Vector3::new(0.0, 0.0, 10.0);
     r.set_vertex_shader(vertex_shader);
     r.set_fragment_shader(active_shader);
-
 
     r.clear(Buffer::Both);
     r.set_model(get_model_matrix_lab3(angle));

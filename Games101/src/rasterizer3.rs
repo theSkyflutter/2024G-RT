@@ -6,23 +6,20 @@ use crate::triangle::Triangle;
 use nalgebra::{Matrix4, Vector2, Vector3, Vector4};
 
 #[allow(dead_code)]
-pub enum Buffer
-{
+pub enum Buffer {
     Color,
     Depth,
     Both,
 }
 
 #[allow(dead_code)]
-pub enum Primitive
-{
+pub enum Primitive {
     Line,
     Triangle,
 }
 
 #[derive(Default)]
-pub struct Rasterizer
-{
+pub struct Rasterizer {
     model: Matrix4<f64>,
     view: Matrix4<f64>,
     projection: Matrix4<f64>,
@@ -47,10 +44,8 @@ pub struct IndBufId(usize);
 #[derive(Clone, Copy)]
 pub struct ColBufId(usize);
 
-impl Rasterizer
-{
-    pub fn new(w: u64, h: u64) -> Self
-    {
+impl Rasterizer {
+    pub fn new(w: u64, h: u64) -> Self {
         let mut r = Rasterizer::default();
         r.width = w;
         r.height = h;
@@ -63,25 +58,11 @@ impl Rasterizer
         r
     }
 
-    fn get_index(height: u64, width: u64, x: usize, y: usize) -> usize
-    {
+    fn get_index(height: u64, width: u64, x: usize, y: usize) -> usize {
         ((height - 1 - y as u64) * width + x as u64) as usize
     }
 
-    fn set_pixel(
-        height: u64,
-        width: u64,
-        frame_buf: &mut Vec<Vector3<f64>>,
-        point: &Vector3<f64>,
-        color: &Vector3<f64>,
-    )
-    {
-        let ind = (height as f64 - 1.0 - point.y) * width as f64 + point.x;
-        frame_buf[ind as usize] = *color;
-    }
-
-    pub fn clear(&mut self, buff: Buffer)
-    {
+    pub fn clear(&mut self, buff: Buffer) {
         match buff {
             Buffer::Color => {
                 self.frame_buf.fill(Vector3::zeros());
@@ -99,38 +80,31 @@ impl Rasterizer
             }
         }
     }
-    pub fn set_model(&mut self, model: Matrix4<f64>)
-    {
+    pub fn set_model(&mut self, model: Matrix4<f64>) {
         self.model = model;
     }
 
-    pub fn set_view(&mut self, view: Matrix4<f64>)
-    {
+    pub fn set_view(&mut self, view: Matrix4<f64>) {
         self.view = view;
     }
 
-    pub fn set_projection(&mut self, projection: Matrix4<f64>)
-    {
+    pub fn set_projection(&mut self, projection: Matrix4<f64>) {
         self.projection = projection;
     }
 
-    pub fn set_texture(&mut self, tex: Texture)
-    {
+    pub fn set_texture(&mut self, tex: Texture) {
         self.texture = Some(tex);
     }
 
-    pub fn set_vertex_shader(&mut self, vert_shader: fn(&VertexShaderPayload) -> Vector3<f64>)
-    {
+    pub fn set_vertex_shader(&mut self, vert_shader: fn(&VertexShaderPayload) -> Vector3<f64>) {
         self.vert_shader = Some(vert_shader);
     }
 
-    pub fn set_fragment_shader(&mut self, frag_shader: fn(&FragmentShaderPayload) -> Vector3<f64>)
-    {
+    pub fn set_fragment_shader(&mut self, frag_shader: fn(&FragmentShaderPayload) -> Vector3<f64>) {
         self.fragment_shader = Some(frag_shader);
     }
 
-    pub fn draw(&mut self, triangles: &Vec<Triangle>)
-    {
+    pub fn draw(&mut self, triangles: &Vec<Triangle>) {
         let mvp = self.projection * self.view * self.model;
 
         // 遍历每个小三角形
@@ -139,8 +113,7 @@ impl Rasterizer
         }
     }
 
-    pub fn rasterize_triangle(&mut self, triangle: &Triangle, mvp: Matrix4<f64>)
-    {
+    pub fn rasterize_triangle(&mut self, triangle: &Triangle, mvp: Matrix4<f64>) {
         /*  Implement your code here  */
 
         let triangle = Rasterizer::get_new_tri(
@@ -264,8 +237,7 @@ impl Rasterizer
         vert2: Vector3<f64>,
         vert3: Vector3<f64>,
         weight: f64,
-    ) -> Vector3<f64>
-    {
+    ) -> Vector3<f64> {
         (a * vert1 + b * vert2 + c * vert3) / weight
     }
     fn interpolate_vec2(
@@ -276,8 +248,7 @@ impl Rasterizer
         vert2: Vector2<f64>,
         vert3: Vector2<f64>,
         weight: f64,
-    ) -> Vector2<f64>
-    {
+    ) -> Vector2<f64> {
         (a * vert1 + b * vert2 + c * vert3) / weight
     }
 
@@ -287,8 +258,7 @@ impl Rasterizer
         model: Matrix4<f64>,
         mvp: Matrix4<f64>,
         (width, height): (u64, u64),
-    ) -> (Triangle, Vec<Vector3<f64>>)
-    {
+    ) -> (Triangle, Vec<Vector3<f64>>) {
         let f1 = (50.0 - 0.1) / 2.0; // zfar和znear距离的一半
         let f2 = (50.0 + 0.1) / 2.0; // zfar和znear的中心z坐标
         let mut new_tri = (*t).clone();
@@ -327,19 +297,16 @@ impl Rasterizer
         (new_tri, view_space_pos)
     }
 
-    pub fn frame_buffer(&self) -> &Vec<Vector3<f64>>
-    {
+    pub fn frame_buffer(&self) -> &Vec<Vector3<f64>> {
         &self.frame_buf
     }
 }
 
-fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64>
-{
+fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
     Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
 }
 
-fn inside_triangle(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> bool
-{
+fn inside_triangle(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> bool {
     let v = [
         Vector3::new(v[0].x, v[0].y, 1.0),
         Vector3::new(v[1].x, v[1].y, 1.0),
@@ -360,8 +327,7 @@ fn inside_triangle(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> bool
     }
 }
 
-fn compute_barycentric2d(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> (f64, f64, f64)
-{
+fn compute_barycentric2d(x: f64, y: f64, v: &[Vector4<f64>; 3]) -> (f64, f64, f64) {
     let c1 = (x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * y + v[1].x * v[2].y - v[2].x * v[1].y)
         / (v[0].x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * v[0].y + v[1].x * v[2].y
             - v[2].x * v[1].y);

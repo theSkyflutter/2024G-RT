@@ -11,8 +11,7 @@ use opencv::imgcodecs::imwrite;
 pub use opencv::Result;
 pub use std::env;
 
-pub fn t1() -> Result<()>
-{
+pub fn t1() -> Result<()> {
     println!("选择任务1");
     let mut angle = 0.0;
     let mut r = Rasterizer::new(700, 700);

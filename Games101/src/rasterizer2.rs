@@ -1,26 +1,23 @@
 use std::collections::HashMap;
 
 use crate::triangle::Triangle;
-use nalgebra::{coordinates::X, ComplexField, Matrix4, Vector3, Vector4};
+use nalgebra::{Matrix4, Vector3, Vector4};
 
 #[allow(dead_code)]
-pub enum Buffer
-{
+pub enum Buffer {
     Color,
     Depth,
     Both,
 }
 
 #[allow(dead_code)]
-pub enum Primitive
-{
+pub enum Primitive {
     Line,
     Triangle,
 }
 
 #[derive(Default, Clone)]
-pub struct Rasterizer
-{
+pub struct Rasterizer {
     model: Matrix4<f64>,
     view: Matrix4<f64>,
     projection: Matrix4<f64>,
@@ -47,10 +44,8 @@ pub struct IndBufId(usize);
 #[derive(Clone, Copy)]
 pub struct ColBufId(usize);
 
-impl Rasterizer
-{
-    pub fn new(w: u64, h: u64) -> Self
-    {
+impl Rasterizer {
+    pub fn new(w: u64, h: u64) -> Self {
         let mut r = Rasterizer::default();
         r.width = w;
         r.height = h;
@@ -62,19 +57,11 @@ impl Rasterizer
         r
     }
 
-    fn get_index(&self, x: usize, y: usize) -> usize
-    {
+    fn get_index(&self, x: usize, y: usize) -> usize {
         ((self.height - 1 - y as u64) * self.width + x as u64) as usize
     }
 
-    fn set_pixel(&mut self, point: &Vector3<f64>, color: &Vector3<f64>)
-    {
-        let ind = (self.height as f64 - 1.0 - point.y) * self.width as f64 + point.x;
-        self.frame_buf[ind as usize] = *color;
-    }
-
-    pub fn clear(&mut self, buff: Buffer)
-    {
+    pub fn clear(&mut self, buff: Buffer) {
         match buff {
             Buffer::Color => {
                 self.frame_buf.fill(Vector3::zeros());
@@ -93,44 +80,37 @@ impl Rasterizer
         }
     }
 
-    pub fn set_model(&mut self, model: Matrix4<f64>)
-    {
+    pub fn set_model(&mut self, model: Matrix4<f64>) {
         self.model = model;
     }
 
-    pub fn set_view(&mut self, view: Matrix4<f64>)
-    {
+    pub fn set_view(&mut self, view: Matrix4<f64>) {
         self.view = view;
     }
 
-    pub fn set_projection(&mut self, projection: Matrix4<f64>)
-    {
+    pub fn set_projection(&mut self, projection: Matrix4<f64>) {
         self.projection = projection;
     }
 
-    fn get_next_id(&mut self) -> usize
-    {
+    fn get_next_id(&mut self) -> usize {
         let res = self.next_id;
         self.next_id += 1;
         res
     }
 
-    pub fn load_position(&mut self, positions: &Vec<Vector3<f64>>) -> PosBufId
-    {
+    pub fn load_position(&mut self, positions: &Vec<Vector3<f64>>) -> PosBufId {
         let id = self.get_next_id();
         self.pos_buf.insert(id, positions.clone());
         PosBufId(id)
     }
 
-    pub fn load_indices(&mut self, indices: &Vec<Vector3<usize>>) -> IndBufId
-    {
+    pub fn load_indices(&mut self, indices: &Vec<Vector3<usize>>) -> IndBufId {
         let id = self.get_next_id();
         self.ind_buf.insert(id, indices.clone());
         IndBufId(id)
     }
 
-    pub fn load_colors(&mut self, colors: &Vec<Vector3<f64>>) -> ColBufId
-    {
+    pub fn load_colors(&mut self, colors: &Vec<Vector3<f64>>) -> ColBufId {
         let id = self.get_next_id();
         self.col_buf.insert(id, colors.clone());
         ColBufId(id)
@@ -142,8 +122,7 @@ impl Rasterizer
         ind_buffer: IndBufId,
         col_buffer: ColBufId,
         _typ: Primitive,
-    )
-    {
+    ) {
         let buf = &self.clone().pos_buf[&pos_buffer.0];
         let ind: &Vec<Vector3<usize>> = &self.clone().ind_buf[&ind_buffer.0];
         let col = &self.clone().col_buf[&col_buffer.0];
@@ -186,8 +165,7 @@ impl Rasterizer
         }
     }
 
-    pub fn rasterize_triangle(&mut self, t: &Triangle)
-    {
+    pub fn rasterize_triangle(&mut self, t: &Triangle) {
         /*  implement your code here  */
 
         let v = [t.v[0].xyz(), t.v[1].xyz(), t.v[2].xyz()];
@@ -296,19 +274,16 @@ impl Rasterizer
         // }
     }
 
-    pub fn frame_buffer(&self) -> &Vec<Vector3<f64>>
-    {
+    pub fn frame_buffer(&self) -> &Vec<Vector3<f64>> {
         &self.frame_buf
     }
 }
 
-fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64>
-{
+fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
     Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
 }
 
-fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool
-{
+fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     /*  implement your code here  */
 
     let (alpha, beta, gamma) = compute_barycentric2d(x, y, v);
@@ -320,8 +295,7 @@ fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool
     }
 }
 
-fn compute_barycentric2d(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> (f64, f64, f64)
-{
+fn compute_barycentric2d(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> (f64, f64, f64) {
     let c1 = (x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * y + v[1].x * v[2].y - v[2].x * v[1].y)
         / (v[0].x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * v[0].y + v[1].x * v[2].y
             - v[2].x * v[1].y);

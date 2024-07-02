@@ -4,17 +4,14 @@ use nalgebra::Vector3;
 use opencv::core::{MatTraitConst, VecN};
 use opencv::imgcodecs::{imread, IMREAD_COLOR};
 
-pub struct Texture
-{
+pub struct Texture {
     pub img_data: opencv::core::Mat,
     pub width: usize,
     pub height: usize,
 }
 
-impl Texture
-{
-    pub fn new(name: &str) -> Self
-    {
+impl Texture {
+    pub fn new(name: &str) -> Self {
         let img_data = imread(name, IMREAD_COLOR).expect("Image reading error!");
         let width = img_data.cols() as usize;
         let height = img_data.rows() as usize;
@@ -47,8 +44,7 @@ impl Texture
     //     Vector3::new(color[2] as f64, color[1] as f64, color[0] as f64)
     // }
 
-    pub fn get_color(&self, mut u: f64, mut v: f64) -> Vector3<f64>
-    {
+    pub fn get_color(&self, mut u: f64, mut v: f64) -> Vector3<f64> {
         // 在此实现双线性插值函数, 并替换掉get_color
 
         if u < 0.0 {

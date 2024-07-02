@@ -11,8 +11,7 @@ use std::os::raw::c_void;
 pub type V3f = Vector3<f64>;
 pub type M4f = Matrix4<f64>;
 
-pub(crate) fn get_view_matrix(eye_pos: V3f) -> M4f
-{
+pub(crate) fn get_view_matrix(eye_pos: V3f) -> M4f {
     let mut view: Matrix4<f64> = Matrix4::identity();
     /*  implement your code here  */
 
@@ -38,8 +37,7 @@ pub(crate) fn get_view_matrix(eye_pos: V3f) -> M4f
     translation * view
 }
 
-pub(crate) fn get_model_matrix(rotation_angle: f64, scale: f64) -> M4f
-{
+pub(crate) fn get_model_matrix(rotation_angle: f64, scale: f64) -> M4f {
     let mut model: Matrix4<f64> = Matrix4::identity();
     /*  implement your code here  */
 
@@ -67,8 +65,7 @@ pub(crate) fn get_model_matrix(rotation_angle: f64, scale: f64) -> M4f
     rotation * model
 }
 
-pub(crate) fn get_model_matrix_with_axis(rotation_angle: f64, axis: &Vector3<f64>) -> M4f
-{
+pub(crate) fn get_model_matrix_with_axis(rotation_angle: f64, axis: &Vector3<f64>) -> M4f {
     let rotation_angle_in_rad = rotation_angle.to_radians();
     let mut outer = Matrix4::zeros();
     outer[15] = 1.0;
@@ -101,8 +98,7 @@ pub(crate) fn get_model_matrix_with_axis(rotation_angle: f64, axis: &Vector3<f64
         + outer
 }
 
-pub(crate) fn get_model_matrix_lab3(rotation_angle: f64) -> M4f
-{
+pub(crate) fn get_model_matrix_lab3(rotation_angle: f64) -> M4f {
     let mut model: M4f = Matrix4::identity();
     let rad = rotation_angle.to_radians();
     model[(0, 0)] = rad.cos();
@@ -116,9 +112,12 @@ pub(crate) fn get_model_matrix_lab3(rotation_angle: f64) -> M4f
     model * scale
 }
 
-pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64, z_far: f64)
-    -> M4f
-{
+pub(crate) fn get_projection_matrix(
+    eye_fov: f64,
+    aspect_ratio: f64,
+    z_near: f64,
+    z_far: f64,
+) -> M4f {
     let mut projection: Matrix4<f64> = Matrix4::identity();
     let mut scale: M4f = Matrix4::identity();
     /*  implement your code here  */
@@ -187,8 +186,7 @@ pub(crate) fn get_projection_matrix(eye_fov: f64, aspect_ratio: f64, z_near: f64
     scale * translation * persp_to_ortho
 }
 
-pub(crate) fn frame_buffer2cv_mat(frame_buffer: &Vec<V3f>) -> Mat
-{
+pub(crate) fn frame_buffer2cv_mat(frame_buffer: &Vec<V3f>) -> Mat {
     let mut image = unsafe {
         Mat::new_rows_cols_with_data(
             700,
@@ -207,8 +205,7 @@ pub(crate) fn frame_buffer2cv_mat(frame_buffer: &Vec<V3f>) -> Mat
     image
 }
 
-pub fn load_triangles(obj_file: &str) -> Vec<Triangle>
-{
+pub fn load_triangles(obj_file: &str) -> Vec<Triangle> {
     let (models, _) = tobj::load_obj(&obj_file, &tobj::LoadOptions::default()).unwrap();
     let mesh = &models[0].mesh;
     let n = mesh.indices.len() / 3;
@@ -239,8 +236,7 @@ pub fn load_triangles(obj_file: &str) -> Vec<Triangle>
 pub fn choose_shader_texture(
     method: &str,
     obj_path: &str,
-) -> (fn(&FragmentShaderPayload) -> Vector3<f64>, Option<Texture>)
-{
+) -> (fn(&FragmentShaderPayload) -> Vector3<f64>, Option<Texture>) {
     let mut active_shader: fn(&FragmentShaderPayload) -> Vector3<f64> = phong_fragment_shader;
     let mut tex = None;
     if method == "normal" {
@@ -263,26 +259,22 @@ pub fn choose_shader_texture(
     (active_shader, tex)
 }
 
-pub fn vertex_shader(payload: &VertexShaderPayload) -> V3f
-{
+pub fn vertex_shader(payload: &VertexShaderPayload) -> V3f {
     payload.position
 }
 
 #[derive(Default)]
-struct Light
-{
+struct Light {
     pub position: V3f,
     pub intensity: V3f,
 }
 
-pub fn normal_fragment_shader(payload: &FragmentShaderPayload) -> V3f
-{
+pub fn normal_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     let result_color = (payload.normal.xyz().normalize() + Vector3::new(1.0, 1.0, 1.0)) / 2.0;
     result_color * 255.0
 }
 
-pub fn phong_fragment_shader(payload: &FragmentShaderPayload) -> V3f
-{
+pub fn phong_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     // 泛光、漫反射、高光系数
     let ka = Vector3::new(0.005, 0.005, 0.005);
     let kd = payload.color;
@@ -329,8 +321,7 @@ pub fn phong_fragment_shader(payload: &FragmentShaderPayload) -> V3f
     result_color * 255.0
 }
 
-pub fn texture_fragment_shader(payload: &FragmentShaderPayload) -> V3f
-{
+pub fn texture_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     let ka = Vector3::new(0.005, 0.005, 0.005);
     let texture_color: Vector3<f64> = match &payload.texture {
         // LAB3 TODO: Get the texture value at the texture coordinates of the current fragment
@@ -380,8 +371,7 @@ pub fn texture_fragment_shader(payload: &FragmentShaderPayload) -> V3f
     result_color * 255.0
 }
 
-pub fn bump_fragment_shader(payload: &FragmentShaderPayload) -> V3f
-{
+pub fn bump_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     let ka = Vector3::new(0.005, 0.005, 0.005);
     let kd = payload.color;
     let ks = Vector3::new(0.7937, 0.7937, 0.7937);
@@ -444,8 +434,7 @@ pub fn bump_fragment_shader(payload: &FragmentShaderPayload) -> V3f
     result_color * 255.0
 }
 
-pub fn displacement_fragment_shader(payload: &FragmentShaderPayload) -> V3f
-{
+pub fn displacement_fragment_shader(payload: &FragmentShaderPayload) -> V3f {
     let ka = Vector3::new(0.005, 0.005, 0.005);
     let kd = payload.color;
     let ks = Vector3::new(0.7937, 0.7937, 0.7937);
