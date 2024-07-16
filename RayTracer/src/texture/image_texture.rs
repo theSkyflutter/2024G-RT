@@ -1,6 +1,5 @@
-use crate::{color::Color, interval::Interval, rtw_image::RtwImage, vec3::Point3};
-
 use super::Texture;
+use crate::{color::Color, interval::Interval, rtw_image::RtwImage, vec3::Point3};
 
 pub struct ImageTexture {
     image: RtwImage,
