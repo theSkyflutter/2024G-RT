@@ -6,7 +6,7 @@ use crate::{
     texture::{SolidColor, Texture},
     vec3::Vec3,
 };
-use std::sync::Arc;
+use std::{f64::consts::PI, sync::Arc};
 
 pub struct Isotropic {
     tex: Arc<dyn Texture>,
@@ -32,8 +32,12 @@ impl Material for Isotropic {
         attenuation: &mut Color,
         scattered: &mut Ray,
     ) -> bool {
-        *scattered = Ray::new_with_time(&rec.p, &Vec3::random_unit_vector(), r_in.time());
         *attenuation = self.tex.value(rec.u, rec.v, &rec.p);
+        *scattered = Ray::new_with_time(&rec.p, &Vec3::random_unit_vector(), r_in.time());
         true
+    }
+
+    fn scattering_pdf(&self, _r_in: &Ray, _rec: &HitRecord, _scattered: &Ray) -> f64 {
+        1.0 / (4.0 * PI)
     }
 }

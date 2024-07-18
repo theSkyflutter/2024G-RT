@@ -1,5 +1,8 @@
 use crate::rtweekend;
-use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign};
+use std::{
+    f64::consts::PI,
+    ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Vec3 {
@@ -70,6 +73,18 @@ impl Vec3 {
                 return p;
             }
         }
+    }
+
+    pub fn random_cosine_direction() -> Self {
+        let r1 = rtweekend::random_double();
+        let r2 = rtweekend::random_double();
+
+        let phi = 2.0 * PI * r1;
+        let x = phi.cos() * r2.sqrt();
+        let y = phi.sin() * r2.sqrt();
+        let z = (1.0 - r2).sqrt();
+
+        Vec3::new(x, y, z)
     }
 
     pub fn squared_length(&self) -> f64 {

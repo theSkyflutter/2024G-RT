@@ -2,6 +2,7 @@ use crate::{
     color::{self, Color},
     hittable::{HitRecord, Hittable, HittableList},
     interval::Interval,
+    pdf::{CosinePdf, HittablePdf, Pdf},
     ray::Ray,
     rtweekend,
     vec3::{Point3, Vec3},
@@ -20,8 +21,9 @@ use std::{
 pub struct Camera {
     image_width: u32,
     image_height: u32,
-    samples_per_pixel: u32,
+    sqrt_spp: u32,
     pixel_samples_scale: f64,
+    recip_sqrt_spp: f64,
     max_depth: u32,
     background: Color,
     center: Point3,
@@ -56,7 +58,9 @@ impl Camera {
             }
         };
 
-        let pixel_samples_scale = 1.0 / samples_per_pixel as f64;
+        let sqrt_spp = (samples_per_pixel as f64).sqrt() as u32;
+        let pixel_samples_scale = 1.0 / sqrt_spp.pow(2) as f64;
+        let recip_sqrt_spp = 1.0 / sqrt_spp as f64;
 
         let center = *lookfrom;
 
@@ -85,8 +89,9 @@ impl Camera {
         Self {
             image_width,
             image_height,
-            samples_per_pixel,
+            sqrt_spp,
             pixel_samples_scale,
+            recip_sqrt_spp,
             max_depth,
             background: *background,
             center,
@@ -99,7 +104,7 @@ impl Camera {
         }
     }
 
-    pub fn render(&self, world: &HittableList) {
+    pub fn render(&self, world: &HittableList/*, lights: &Arc<dyn Hittable>*/) {
         let matches = clap::command!()
             .arg(
                 clap::arg!(-o <NAME>)
@@ -109,9 +114,11 @@ impl Camera {
             )
             .get_matches();
         let path = String::from("output/") + matches.get_one::<String>("NAME").unwrap() + ".png";
+        let mut output_file = File::create(&path).unwrap();
 
         let self_clone = Arc::new(self.clone());
         let world = Arc::new(world.clone());
+        // let lights = Arc::new(lights.clone());
         let img = Arc::new(Mutex::new(DynamicImage::new_rgb8(
             self.image_width,
             self.image_height,
@@ -128,6 +135,7 @@ impl Camera {
         for thread_ind in 0..threads_num {
             let self_clone = self_clone.clone();
             let world = world.clone();
+            // let lights = lights.clone();
             let img = img.clone();
             let bar = bar.clone();
             let render_thread = thread::spawn(move || {
@@ -137,10 +145,16 @@ impl Camera {
                             == thread_ind as u32
                         {
                             let mut pixel_color = Color::zeros();
-                            for _sample in 0..self_clone.samples_per_pixel {
-                                let r = self_clone.get_ray(i, j);
-                                pixel_color +=
-                                    self_clone.ray_color(&r, self_clone.max_depth, &world);
+                            for s_j in 0..self_clone.sqrt_spp {
+                                for s_i in 0..self_clone.sqrt_spp {
+                                    let r = self_clone.get_ray(i, j, s_i, s_j);
+                                    pixel_color += self_clone.ray_color(
+                                        &r,
+                                        self_clone.max_depth,
+                                        &world,
+                                        // &lights,
+                                    );
+                                }
                             }
                             color::write_color(
                                 &(pixel_color * self_clone.pixel_samples_scale),
@@ -162,7 +176,6 @@ impl Camera {
         }
         Arc::try_unwrap(bar).unwrap().finish();
 
-        let mut output_file = File::create(&path).unwrap();
         match Arc::try_unwrap(img)
             .unwrap()
             .into_inner()
@@ -178,8 +191,8 @@ impl Camera {
         }
     }
 
-    fn get_ray(&self, i: u32, j: u32) -> Ray {
-        let offset = sample_square();
+    fn get_ray(&self, i: u32, j: u32, s_i: u32, s_j: u32) -> Ray {
+        let offset = self.sample_square_stratified(s_i, s_j);
         let pixel_sample = self.pixel00_loc
             + (self.pixel_delta_u * (i as f64 + offset.x)
                 + self.pixel_delta_v * (j as f64 + offset.y));
@@ -195,15 +208,26 @@ impl Camera {
         Ray::new_with_time(&ray_origin, &ray_direction, ray_time)
     }
 
+    fn sample_square_stratified(&self, s_i: u32, s_j: u32) -> Vec3 {
+        let px = (s_i as f64 + rtweekend::random_double()) * self.recip_sqrt_spp - 0.5;
+        let py = (s_j as f64 + rtweekend::random_double()) * self.recip_sqrt_spp - 0.5;
+
+        Vec3::new(px, py, 0.0)
+    }
+
     fn defocus_disk_sample(&self) -> Point3 {
         let p = Vec3::random_in_unit_disk();
         self.center + self.defocus_disk_u * p.x + self.defocus_disk_v * p.y
     }
 
-    fn ray_color(&self, r: &Ray, depth: u32, world: &HittableList) -> Color {
-        if depth == 0 {
-            Color::zeros()
-        } else {
+    fn ray_color(
+        &self,
+        r: &Ray,
+        depth: u32,
+        world: &HittableList,
+        // lights: &Arc<dyn Hittable>,
+    ) -> Color {
+        if depth > 0 {
             let mut rec = HitRecord::default();
 
             if world.hit(r, &Interval::new(0.001, INFINITY), &mut rec) {
@@ -211,29 +235,42 @@ impl Camera {
                     Some(mat) => {
                         let mut scattered = Ray::default();
                         let mut attenuation = Color::default();
-                        let color_from_emission = mat.emitted(rec.u, rec.v, &rec.p);
+                        let color_from_emission = mat.emitted(r, &rec, rec.u, rec.v, &rec.p);
+                        // let color_from_emission = mat.emitted(r, &rec, rec.u, rec.v, &rec.p);
 
                         if mat.scatter(r, &rec, &mut attenuation, &mut scattered) {
+                            let surface_pdf = CosinePdf::new(&rec.normal);
+                            // let light_pdf = HittablePdf::new(lights, &rec.p);
+                            scattered =
+                                Ray::new_with_time(&rec.p, &surface_pdf.generate(), r.time());
+                            // scattered = Ray::new_with_time(&rec.p, &light_pdf.generate(), r.time());
+                            let pdf_val = surface_pdf.value(scattered.direction());
+                            // let pdf_val = light_pdf.value(scattered.direction());
+
+                            let scattering_pdf = mat.scattering_pdf(r, &rec, &scattered);
+
+                            // let sample_color = self.ray_color(&scattered, depth - 1, world, lights);
                             let color_from_scatter =
-                                attenuation.elemul(&self.ray_color(&scattered, depth - 1, world));
+                                attenuation.elemul(&self.ray_color(&scattered, depth - 1, world))
+                                    * scattering_pdf
+                                    / pdf_val;
+                            // let color_from_scatter =
+                            //     attenuation.elemul(&sample_color) * scattering_pdf / pdf_val;
+
                             color_from_emission + color_from_scatter
                         } else {
                             color_from_emission
                         }
                     }
-                    _ => Color::zeros(),
+                    _ => {
+                        panic!()
+                    }
                 }
             } else {
                 self.background
             }
+        } else {
+            Color::zeros()
         }
     }
-}
-
-fn sample_square() -> Vec3 {
-    Vec3::new(
-        rtweekend::random_double() - 0.5,
-        rtweekend::random_double() - 0.5,
-        0.0,
-    )
 }

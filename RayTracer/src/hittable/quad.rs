@@ -4,9 +4,10 @@ use crate::{
     interval::Interval,
     material::Material,
     ray::Ray,
+    rtweekend,
     vec3::{Point3, Vec3},
 };
-use std::sync::Arc;
+use std::{f64::INFINITY, sync::Arc};
 
 pub struct Quad {
     q: Point3,
@@ -17,6 +18,7 @@ pub struct Quad {
     bbox: Aabb,
     normal: Vec3,
     d: f64,
+    area: f64,
 }
 
 impl Quad {
@@ -25,6 +27,8 @@ impl Quad {
         let normal = n.unit();
         let d = normal * *q;
         let w = n / (n * n);
+
+        let area = n.length();
 
         let bbox_diagonal1 = Aabb::from_endpoints(q, &(*q + *u + *v));
         let bbox_diagonal2 = Aabb::from_endpoints(&(*q + *u), &(*q + *v));
@@ -39,6 +43,7 @@ impl Quad {
             bbox,
             normal,
             d,
+            area,
         }
     }
 }
@@ -55,26 +60,48 @@ impl Hittable for Quad {
             false
         } else {
             let t = (self.d - self.normal * *r.origin()) / denom;
-            if !ray_t.contains(t) {
-                false
-            } else {
+            if ray_t.contains(t) {
                 let intersection = r.at(t);
                 let planar_hitpt_vector = intersection - self.q;
                 let alpha = self.w * planar_hitpt_vector.cross(&self.v);
                 let beta = self.w * self.u.cross(&planar_hitpt_vector);
 
-                if !is_interiior(alpha, beta, rec) {
-                    false
-                } else {
+                if is_interiior(alpha, beta, rec) {
                     rec.t = t;
                     rec.p = intersection;
                     rec.mat = Some(self.mat.clone());
                     rec.set_face_normal(r, &self.normal);
 
                     true
+                } else {
+                    false
                 }
+            } else {
+                false
             }
         }
+    }
+
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64 {
+        let mut rec = HitRecord::default();
+        if self.hit(
+            &Ray::new(origin, direction),
+            &Interval::new(0.001, INFINITY),
+            &mut rec,
+        ) {
+            let distance_squared = rec.t.powi(2) * direction.squared_length();
+            let cosine = (*direction * rec.normal / direction.length()).abs();
+
+            distance_squared / (cosine * self.area)
+        } else {
+            0.0
+        }
+    }
+
+    fn random(&self, origin: &Point3) -> Vec3 {
+        let p =
+            self.q + (self.u * rtweekend::random_double()) + (self.v * rtweekend::random_double());
+        p - *origin
     }
 }
 

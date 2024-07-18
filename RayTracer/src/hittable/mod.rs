@@ -23,9 +23,18 @@ use crate::{
 };
 use std::sync::Arc;
 
+#[allow(unused_variables)]
 pub trait Hittable: Send + Sync {
     fn hit(&self, r: &Ray, ray_t: &Interval, rec: &mut HitRecord) -> bool;
     fn bounding_box(&self) -> Aabb;
+
+    fn pdf_value(&self, origin: &Point3, direction: &Vec3) -> f64 {
+        0.0
+    }
+
+    fn random(&self, origin: &Point3) -> Vec3 {
+        Vec3::new(1.0, 0.0, 0.0)
+    }
 }
 
 #[derive(Clone, Default)]

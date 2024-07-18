@@ -8,13 +8,13 @@ pub struct Ray {
 }
 
 impl Ray {
-    // pub fn new(origin: &Point3, direction: &Vec3) -> Self {
-    //     Self {
-    //         orig: origin.clone(),
-    //         dir: direction.clone(),
-    //         tm: 0.0,
-    //     }
-    // }
+    pub fn new(origin: &Point3, direction: &Vec3) -> Self {
+        Self {
+            orig: origin.clone(),
+            dir: direction.clone(),
+            tm: 0.0,
+        }
+    }
 
     pub fn new_with_time(origin: &Point3, direction: &Vec3, time: f64) -> Self {
         Self {
